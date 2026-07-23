@@ -111,6 +111,10 @@ export const adminStats = createServerFn({ method: "POST" }).handler(async () =>
     supabaseAdmin.from("blocked_ips").select("*", { count: "exact", head: true }),
     supabaseAdmin.from("active_warnings").select("*", { count: "exact", head: true }),
   ]);
+
+  const firstError = logs.error ?? uniques.error ?? blocks.error ?? warnings.error;
+  if (firstError) throw new Error(firstError.message);
+
   const uniqueIps = new Set((uniques.data ?? []).map((r) => r.ip)).size;
   return {
     totalSearches: logs.count ?? 0,
