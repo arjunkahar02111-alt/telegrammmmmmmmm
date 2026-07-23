@@ -60,9 +60,13 @@ function AdminPage() {
   const [healthLoading, setHealthLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [tab, setTab] = useState<"logs" | "blocks" | "warnings">("logs");
 
   const refresh = async () => {
+    setRefreshing(true);
+    setError(null);
     try {
       const [l, b, w, s] = await Promise.all([
         listLogs({ data: { search: search || undefined } }),
@@ -74,8 +78,11 @@ function AdminPage() {
       setBlocks(b as Block[]);
       setWarnings(w as Warning[]);
       setStats(s as Stats);
+      setLastUpdated(new Date().toLocaleTimeString());
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -105,6 +112,15 @@ function AdminPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!ready) return;
+    const interval = window.setInterval(() => {
+      void refresh();
+    }, 10_000);
+    return () => window.clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, search]);
+
 
   const signOut = async () => {
     await lock();
@@ -124,11 +140,17 @@ function AdminPage() {
             <p className="text-xs text-[#8ea3b8]">Monitor and control the TG Lookup site</p>
           </div>
           <div className="flex gap-2">
+            {lastUpdated && (
+              <span className="hidden items-center text-[11px] text-[#8ea3b8] sm:flex">
+                Updated {lastUpdated} · auto 10s
+              </span>
+            )}
             <button
               onClick={refresh}
+              disabled={refreshing}
               className="rounded-lg bg-white/5 px-3 py-1.5 text-xs hover:bg-white/10"
             >
-              Refresh
+              {refreshing ? "Refreshing…" : "Refresh"}
             </button>
             <button
               onClick={signOut}
