@@ -112,7 +112,7 @@ export const Route = createFileRoute("/api/lookup")({
               error: (raw.error as string) || "No result found for this Telegram ID",
             };
 
-        await supabaseAdmin.from("search_logs").insert({
+        const { error: logError } = await supabaseAdmin.from("search_logs").insert({
           ip,
           tg_id: query,
           found,
@@ -121,6 +121,14 @@ export const Route = createFileRoute("/api/lookup")({
           country_code: countryCode,
           user_agent: userAgent,
         });
+
+        if (logError) {
+          console.error("[lookup] Failed to save search log", logError.message);
+          return new Response(
+            JSON.stringify({ success: false, error: "Service temporarily unavailable. Please contact admin." }),
+            { status: 503, headers: SECURE_HEADERS },
+          );
+        }
 
         // Fire-and-forget Discord webhook
         const webhook = process.env.DISCORD_WEBHOOK_URL;
