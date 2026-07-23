@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-export const adminListLogs = createServerFn({ method: "GET" })
+export const adminListLogs = createServerFn({ method: "POST" })
   .inputValidator((d: { limit?: number; search?: string }) =>
     z
       .object({
@@ -25,7 +25,7 @@ export const adminListLogs = createServerFn({ method: "GET" })
     return rows ?? [];
   });
 
-export const adminListBlocks = createServerFn({ method: "GET" }).handler(async () => {
+export const adminListBlocks = createServerFn({ method: "POST" }).handler(async () => {
   const { requireAdminSession } = await import("@/lib/admin-gate.server");
   await requireAdminSession();
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -63,7 +63,7 @@ export const adminUnblockIp = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const adminListWarnings = createServerFn({ method: "GET" }).handler(async () => {
+export const adminListWarnings = createServerFn({ method: "POST" }).handler(async () => {
   const { requireAdminSession } = await import("@/lib/admin-gate.server");
   await requireAdminSession();
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -101,7 +101,7 @@ export const adminClearWarning = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const adminStats = createServerFn({ method: "GET" }).handler(async () => {
+export const adminStats = createServerFn({ method: "POST" }).handler(async () => {
   const { requireAdminSession } = await import("@/lib/admin-gate.server");
   await requireAdminSession();
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
