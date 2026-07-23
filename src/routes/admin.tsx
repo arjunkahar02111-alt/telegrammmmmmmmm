@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { checkAdminSession, lockAdmin } from "@/lib/admin-gate.functions";
 import {
   adminListLogs,
@@ -63,13 +63,22 @@ function AdminPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [tab, setTab] = useState<"logs" | "blocks" | "warnings">("logs");
+  const searchRef = useRef(search);
+  const refreshingRef = useRef(false);
 
-  const refresh = async () => {
+  useEffect(() => {
+    searchRef.current = search;
+  }, [search]);
+
+  const refresh = useCallback(async () => {
+    if (refreshingRef.current) return;
+    refreshingRef.current = true;
     setRefreshing(true);
     setError(null);
     try {
+      const currentSearch = searchRef.current.trim();
       const [l, b, w, s] = await Promise.all([
-        listLogs({ data: { search: search || undefined } }),
+        listLogs({ data: { search: currentSearch || undefined } }),
         listBlocks(),
         listWarnings(),
         getStats(),
@@ -82,11 +91,12 @@ function AdminPage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
+      refreshingRef.current = false;
       setRefreshing(false);
     }
-  };
+  }, [getStats, listBlocks, listLogs, listWarnings]);
 
-  const checkHealth = async () => {
+  const checkHealth = useCallback(async () => {
     setHealthLoading(true);
     try {
       const r = await fetch("/api/public/health", { cache: "no-store" });
@@ -97,7 +107,7 @@ function AdminPage() {
     } finally {
       setHealthLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -110,7 +120,7 @@ function AdminPage() {
       await Promise.all([refresh(), checkHealth()]);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [check, checkHealth, navigate, refresh]);
 
   useEffect(() => {
     if (!ready) return;
@@ -118,8 +128,7 @@ function AdminPage() {
       void refresh();
     }, 10_000);
     return () => window.clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, search]);
+  }, [ready, refresh]);
 
 
   const signOut = async () => {
@@ -308,7 +317,7 @@ function AdminPage() {
                   {logs.length === 0 && (
                     <tr>
                       <td colSpan={8} className="p-6 text-center text-[#8ea3b8]">
-                        No searches yet.
+                        {search.trim() ? "No logs match this filter." : "No searches yet."}
                       </td>
                     </tr>
                   )}
